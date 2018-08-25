@@ -1,0 +1,10 @@
+//AWS setup
+sudo yum-config-manager --enable epel
+sudo yum install redis
+# Start redis server
+sudo redis-server /etc/redis.conf
+
+
+//update java
+sudo yum install java-1.8.0
+sudo yum remove java-1.7.0-openjdk

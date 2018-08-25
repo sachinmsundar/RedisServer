@@ -25,7 +25,7 @@ public class RedisVertxServer extends AbstractVerticle{
         System.out.println("Redis Host - Accepting Connections..");
 
 
-            router.route(HttpMethod.POST, "/transaction").handler(routingContext -> {
+            router.route(HttpMethod.POST, "/transactionGet").handler(routingContext -> {
                 HttpServerRequest req = routingContext.request();
                     req.bodyHandler(buffer -> {
                         try {
