@@ -2,7 +2,7 @@
 sudo yum-config-manager --enable epel
 sudo yum install redis
 # Start redis server
-sudo redis-server /etc/redis.conf
+sudo redis-server /etc/redis.conf --daemonize yes
 
 
 //update java
