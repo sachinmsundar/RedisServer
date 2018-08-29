@@ -16,6 +16,44 @@ import java.net.URL;
 public class HttpPostWithString {
     public static void main(String[] args) throws IOException {
 
+//        URL url = new URL("http://localhost:8080/transactionGet");
+//        HttpURLConnection http = (HttpURLConnection) url.openConnection();
+//
+//        http.setDoOutput(true);
+//        http.setDoInput(true);
+//        http.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+//        http.setRequestProperty("Accept", "application/json");
+//        http.setRequestMethod("POST");
+//
+//        String r = "test1";
+//        OutputStreamWriter wr = new OutputStreamWriter(http.getOutputStream());
+//        wr.write(r);
+//        wr.flush();
+//
+//
+//        StringBuilder sb = new StringBuilder();
+//        int HttpResult = http.getResponseCode();
+//        if (HttpResult == HttpURLConnection.HTTP_OK) {
+//            BufferedReader br = new BufferedReader(
+//                    new InputStreamReader(http.getInputStream(), "utf-8"));
+//            String line = null;
+//            while ((line = br.readLine()) != null) {
+//                sb.append(line + "\n");
+//            }
+//            br.close();
+//            System.out.println("" + sb.toString());
+//        } else {
+//            System.out.println(http.getResponseMessage());
+//        }
+
+//
+        JsonObject resp = new JsonObject();
+
+    }
+
+    public JsonObject doTransactionGet(String s) throws IOException {
+
+        JsonObject resp = new JsonObject();
         URL url = new URL("http://localhost:8080/transactionGet");
         HttpURLConnection http = (HttpURLConnection) url.openConnection();
 
@@ -25,9 +63,9 @@ public class HttpPostWithString {
         http.setRequestProperty("Accept", "application/json");
         http.setRequestMethod("POST");
 
-        String r = "test1";
+//        String s = "test1";
         OutputStreamWriter wr = new OutputStreamWriter(http.getOutputStream());
-        wr.write(r);
+        wr.write(s);
         wr.flush();
 
 
@@ -45,5 +83,8 @@ public class HttpPostWithString {
         } else {
             System.out.println(http.getResponseMessage());
         }
+
+        return resp;
     }
+
 }
