@@ -1,5 +1,6 @@
 package com.reddevil.test.redisHandler;
 
+import io.vertx.core.VertxException;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
@@ -8,9 +9,10 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import redis.clients.jedis.Jedis;
+
+import java.util.UUID;
 
 
 /**
@@ -19,7 +21,7 @@ import redis.clients.jedis.Jedis;
 public class RedisVertxServer extends AbstractVerticle{
 
     @Override
-    public void start() {
+    public void start() throws Exception {
         HttpServer server = vertx.createHttpServer();
         Router router = Router.router(vertx);
         Jedis jedis = new Jedis("localhost");
@@ -71,8 +73,28 @@ public class RedisVertxServer extends AbstractVerticle{
                         routingContext.response()
                                 .putHeader("content-type", "application/json")
                                 .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+                    }catch (NullPointerException e){
+                        System.out.println("RedisServerHandler - Error in put operation..");
+                        routingContext.response()
+                                .putHeader("content-type", "application/json")
+                                .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+                    }catch (Exception e){
+                        System.out.println("RedisServerHandler - Error in put operation..");
+                        routingContext.response()
+                                .putHeader("content-type", "application/json")
+                                .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
                     }
                 });
+            }catch(VertxException e){
+                System.out.println("RedisServerHandler - Error in put operation..");
+                routingContext.response()
+                        .putHeader("content-type", "application/json")
+                        .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+            }catch (NullPointerException e){
+                System.out.println("RedisServerHandler - Error in put operation..");
+                routingContext.response()
+                        .putHeader("content-type", "application/json")
+                        .end(Json.encode(new JsonObject().put("Error", e.getMessage().toString())));
             }catch (Exception e){
                 System.out.println("RedisServerHandler - Error in put operation..");
                 routingContext.response()
@@ -94,7 +116,7 @@ public class RedisVertxServer extends AbstractVerticle{
                         } else {
                             resp.put("returnCode", "KeyNotFound");
                         }
-                        System.out.println("RedisServerHandler - Processed in delete operation for key: " +key);
+                        System.out.println("RedisServerHandler - Processed delete operation for key: " +key);
                         routingContext.response().putHeader("content-type", "application/json").end(Json.encode(resp));
                     }catch (Exception e){
                         System.out.println("RedisServerHandler - Error in delete operation..");
@@ -117,7 +139,7 @@ public class RedisVertxServer extends AbstractVerticle{
                     } else {
                         resp.put("returnCode", "KeyNotFound");
                     }
-                    System.out.println("RedisServerHandler - Processed in delete operation for key: " +key);
+                    System.out.println("RedisServerHandler - Processed delete operation for key: " +key);
                     routingContext.response().putHeader("content-type", "application/json").end(Json.encode(resp));
                 }catch (Exception e){
                     System.out.println("RedisServerHandler - Error in delete operation..");
@@ -146,6 +168,7 @@ public class RedisVertxServer extends AbstractVerticle{
                         //check is key exists
                         String r = jedis.get(key);
                         JsonObject jo = null;
+                        JsonArray forUnni = new JsonArray();
 
                         //build response
                         if (r == null || r.isEmpty()) {
@@ -155,35 +178,126 @@ public class RedisVertxServer extends AbstractVerticle{
                             jo = new JsonObject(r);
                         }
 
-                        if (jo != null) {
-                            boolean added = false;
+                        try {
                             if (jo != null) {
-                                JsonArray ja = jo.getJsonArray("userList");
-                                for (int i = 0; i < ja.size(); i++) {
-                                    JsonObject obj = ja.getJsonObject(i);
-                                    String uKey = obj.getString("userKey");
-                                    if (uKey.equals(inputkey)) {
-                                        ja.add(val);
-                                        jo.put("userList", ja);
-                                        added = true;
+                                boolean added = false;
+                                if (jo != null) {
+                                    JsonArray ja = jo.getJsonArray("userList");
+                                    for (int i = 0; i < ja.size(); i++) {
+                                        JsonObject obj = ja.getJsonObject(i);
+                                        String uKey = obj.getString("userKey");
+                                        //forUnni.add()
+                                        if (uKey.equals(inputkey)) {
+                                            ja.add(val);
+                                            jo.put("userList", ja);
+                                            added = true;
+                                        }
                                     }
+
+                                    if (added == false) {
+                                        ja.add(inputJ.getJsonArray("userList").getJsonObject(0));
+                                        jo.put("userList", ja);
+                                    }
+
+                                    //call unni
+                                    JsonArray matched = null;
+                                    if (ja.size() > 1) {
+                                        matched = matchUsers(ja);
+                                        UUID uuid = UUID.randomUUID();
+                                        String randomUUIDString = uuid.toString();
+
+                                        if (matched.size() == 2) {
+                                            JsonObject first = matched.getJsonObject(0);
+                                            JsonObject second = matched.getJsonObject(1);
+
+                                            JsonObject m1 = new JsonObject();
+                                            JsonObject m2 = new JsonObject();
+
+                                            m1.put("matchedTo", second.getString("userKey"));
+                                            m1.put("rideID", randomUUIDString);
+                                            m1.put("rideType", first.getString("rideType"));
+                                            m1.put("startLat", first.getString("startLat"));
+                                            m1.put("startLong", first.getString("startLong"));
+                                            m1.put("destLat", first.getString("destLat"));
+                                            m1.put("destLong", first.getString("destLong"));
+
+
+                                            m1.put("startLatOther", second.getString("startLat"));
+                                            m1.put("startLongOther", second.getString("startLong"));
+                                            m1.put("destLatOther", second.getString("destLat"));
+                                            m1.put("destLongOther", second.getString("destLong"));
+
+
+                                            m2.put("matchedTo", first.getString("userKey"));
+                                            m2.put("rideID", randomUUIDString);
+                                            m2.put("rideType", second.getString("rideType"));
+
+                                            m2.put("startLat", second.getString("startLat"));
+                                            m2.put("startLong", second.getString("startLong"));
+                                            m2.put("destLat", second.getString("destLat"));
+                                            m2.put("destLong", second.getString("destLong"));
+
+                                            m2.put("startLatOther", first.getString("startLat"));
+                                            m2.put("startLongOther", first.getString("startLong"));
+                                            m2.put("destLatOther", first.getString("destLat"));
+                                            m2.put("destLongOther", first.getString("destLong"));
+
+                                            String k1 = first.getString("userKey") + "matched";
+                                            String k2 = second.getString("userKey") + "matched";
+
+                                            jedis.set(k1, m1.toString());
+                                            jedis.set(k2, m2.toString());
+
+                                            //remove these two users from the active users table
+                                            String remove1 = first.getString("userKey");
+                                            String remove2 = second.getString("userKey");
+                                            int size = ja.size();
+                                            JsonArray newJa = new JsonArray();
+                                            for (int i = 0; i < size; i++) {
+                                                JsonObject obj = ja.getJsonObject(i);
+                                                String uKey = obj.getString("userKey");
+                                                if (uKey.equals(remove1) || uKey.equals(remove2)) {
+//                                                ja.remove(i);
+                                                } else {
+                                                    newJa.add(obj);
+                                                }
+                                            }
+                                            jo.put("userList", newJa);
+                                        }
+                                    }
+
                                 }
 
-                                if (added == false) {
-                                    ja.add(inputJ.getJsonArray("userList").getJsonObject(0));
-                                    jo.put("userList", ja);
-                                }
+                                //put the updated list back
+                                jedis.set(key, jo.toString());
+
+                                resp.put("returnCode", "Success");
                             }
-
-                            //put the updated list back
-                            jedis.set(key, jo.toString());
-
-                            resp.put("returnCode", "Success");
+                        }catch(Exception e){
+                            System.out.println("RedisServerHandler - Error in put operation..");
+                            routingContext.response()
+                                    .putHeader("content-type", "application/json")
+                                    .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
                         }
 
                         System.out.println("RedisServerHandler - Processed put operation for key: " +key);
                         routingContext.response().putHeader("content-type", "application/json").end(Json.encode(resp));
                     }catch (DecodeException e){
+                        System.out.println("RedisServerHandler - Error in put operation..");
+                        routingContext.response()
+                                .putHeader("content-type", "application/json")
+                                .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+                    }catch (NullPointerException e){
+                        System.out.println("RedisServerHandler - Error in put operation..");
+                        routingContext.response()
+                                .putHeader("content-type", "application/json")
+                                .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+                    }catch(VertxException e){
+                        System.out.println("RedisServerHandler - Error in put operation..");
+                        routingContext.response()
+                                .putHeader("content-type", "application/json")
+                                .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+                    }catch(Exception e){
                         System.out.println("RedisServerHandler - Error in put operation..");
                         routingContext.response()
                                 .putHeader("content-type", "application/json")
@@ -256,6 +370,11 @@ public class RedisVertxServer extends AbstractVerticle{
                         routingContext.response()
                                 .putHeader("content-type", "application/json")
                                 .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+                    }catch (Exception e){
+                        System.out.println("RedisServerHandler - Error in put operation..");
+                        routingContext.response()
+                                .putHeader("content-type", "application/json")
+                                .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
                     }
                 });
             }catch (Exception e){
@@ -314,6 +433,11 @@ public class RedisVertxServer extends AbstractVerticle{
                         routingContext.response()
                                 .putHeader("content-type", "application/json")
                                 .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
+                    }catch(Exception e){
+                        System.out.println("RedisServerHandler - Error in put operation..");
+                        routingContext.response()
+                                .putHeader("content-type", "application/json")
+                                .end(Json.encode(new JsonObject().put("Error", e.getMessage())));
                     }
                 });
             }catch (Exception e){
@@ -326,5 +450,31 @@ public class RedisVertxServer extends AbstractVerticle{
 
 
         server.requestHandler(router::accept).listen(8080);
+    }
+
+    public JsonArray matchUsers(JsonArray users){
+
+        JsonArray resp = new JsonArray();
+        boolean req = false;
+        boolean off = false;
+        for(int i = 0; i < users.size(); i++){
+            JsonObject j = users.getJsonObject(i);
+
+            if ((users.getJsonObject(i).getString("rideType").equals("Request"))){
+                if(req == false){
+                    resp.add(users.getJsonObject(i));
+                    req = true;
+                }
+            }
+
+            if ((users.getJsonObject(i).getString("rideType").equals("Offer"))){
+                if(off == false){
+                    resp.add(users.getJsonObject(i));
+                    off = true;
+                }
+            }
+        }
+
+        return resp;
     }
 }

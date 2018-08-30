@@ -7,6 +7,10 @@ import io.vertx.core.Vertx;
  */
 public class RedisVertxLauncher {
     public static void main(String[] args) {
-        Vertx.vertx().deployVerticle(new RedisVertxServer());
+        try {
+            Vertx.vertx().deployVerticle(new RedisVertxServer());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }
